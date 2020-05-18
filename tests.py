@@ -2,15 +2,18 @@ import unittest
 import linearAlgebraLib as la
 
 
-class linearAlgebraTest(unittest.TestCase):
+class LinearAlgebraTest(unittest.TestCase):
 
     def test_matrix(self):
         # Matrix construction
         self.assertEqual(la.Matrix([[1, 1], [1, 1]]).data, [[1, 1], [1, 1]])
-        
+
         # Matrix functions
         self.assertEqual(la.Matrix([[1, 2], [3, 4]]).transpose(), la.Matrix([[1, 3], [2, 4]]))
         self.assertEqual(la.Matrix([[1, 2], [3, 4], [5, 6]]).transpose(), la.Matrix([[1, 3, 5], [2, 4, 6]]))
+        self.assertEqual(la.Matrix([[1, 0], [0, 1]]).determinant(), 1)
+        self.assertEqual(la.Matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]]).to_echelon(), 
+                         la.Matrix([[1, 2, 3], [0.0, -3.0, -6.0], [0.0, 0.0, 0.0]]))
 
     def test_identity(self):
         self.assertEqual(la.identity_matrix(2).data, [[1, 0], [0, 1]])
@@ -35,8 +38,12 @@ class linearAlgebraTest(unittest.TestCase):
         self.assertEqual((la.Vector([1, 2, 3]) + la.Vector([1, 2, 3])), la.Vector([2, 4, 6]))
         self.assertEqual((la.Vector([1, 2, 3]) - la.Vector([1, 2, 3])), la.Vector([0, 0, 0]))
         self.assertEqual((la.Vector([1, 1, 1], False) * la.Vector([1, 1, 1])), 3)
-        self.assertEqual((la.Vector([1, 1, 1]) * la.Vector([1, 1, 1], False)), 
-                         la.Matrix([[1, 1, 1],[1, 1, 1],[1, 1, 1]]))
+        self.assertEqual((la.Vector([1, 1, 1]) * la.Vector([1, 1, 1], False)),
+                         la.Matrix([[1, 1, 1], [1, 1, 1], [1, 1, 1]]))
+        
+        # Vector-matrix functions
+        self.assertEqual((la.Vector([1, 1, 1], False) * la.Matrix([[1, 1, 1], [1, 1, 1], [1, 1, 1]])), 
+                         la.Vector([3, 3, 3], False))
 
 
 if __name__ == '__main__':
