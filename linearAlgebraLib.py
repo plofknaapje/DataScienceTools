@@ -1,4 +1,9 @@
 import math
+from fractions import Fraction
+from timeit import timeit
+
+from helpers.matrix_helpers import *
+
 
 class Matrix:
 
@@ -11,34 +16,114 @@ class Matrix:
             if len(row) != row_len:
                 raise Exception('Rows not equal length') from None
             for point in row:
-                if not (isinstance(point, (int, float, complex)) and not isinstance(point, bool)):
+                if not (isinstance(point, (int, float, complex, Fraction)) and not isinstance(point, bool)):
                     raise Exception('Value is not a number') from None
-        self.data = data
-        self.nrows = len(data)
-        self.ncols = len(data[1])
+        self.data = [[Fraction(col) for col in row] for row in data]
+        self.n_rows = len(data)
+        self.n_cols = len(data[1])
 
     def __eq__(self, other):
         return self.data == other.data
+
+    def __mul__(self, other):
+        # other is a scalar
+        if isinstance(other, (int, float, complex, Fraction)) and not isinstance(other, bool):
+            return Matrix([[p * other for p in row] for row in self.data])
+        # other is Vector
+        elif isinstance(other, Vector):
+            if other.column:
+                if len(other) == self.n_cols:
+                    other = other.transpose()
+                    return Vector([other * Vector(row) for row in self.data])
+                else:
+                    raise ValueError('Dimensions of Matrix and Vector do not match')
+            else:
+                raise ValueError('Matrix can only be multiplied with a column Vector')
+        elif isinstance(other, Matrix):
+            if self.n_cols == other.n_rows:
+                other = other.transpose()
+                return Matrix([[Vector(row, False) * Vector(col) for col in other.data] for row in self.data])
+            else:
+                raise ValueError('Dimensions of matrices do not match')
+        else:
+            raise TypeError('Type is not compatible with matrix multiplication')
+
+    def __truediv__(self, other):
+        # other is scalar
+        if isinstance(other, (int, float, complex, Fraction)) and not isinstance(other, bool):
+            return [[p / other for p in row] for row in self.data]
+        else:
+            raise TypeError('Matrix can only be divided by a scalar')
+
+    def __add__(self, other):
+        # other is scalar
+        if isinstance(other, (int, float, complex, Fraction)) and not isinstance(other, bool):
+            return [[p + other for p in row] for row in self.data]
+        # other is Matrix
+        elif isinstance(other, Matrix):
+            if self.n_cols == other.n_cols and self.n_rows == other.n_rows:
+                return Matrix([[self.data[row][col] + other.data[row][col]
+                                for col in range(self.n_cols)] for row in range(self.n_rows)])
+            else:
+                raise ValueError('Dimensions of matrices do not match')
+        else:
+            raise TypeError('Matrix can only be divided by a scalar')
+
+    def __sub__(self, other):
+        return self.__add__(other * -1)
+
+    def __str__(self):
+        rows = ['[' + ', '.join([str(i) for i in row]) + ']' for row in self.data]
+        return '\n'.join(rows)
 
     def transpose(self):
         return Matrix([[self.data[r][c] for r in range(len(self.data))]
                        for c in range(len(self.data[1]))])
 
     def to_echelon(self, report_ops=False):
-        return Matrix(reduce_echelon(self.data, report_ops))
+        matrix, ops = reduce_to_echelon(self.data.copy(), True)
+        if report_ops:
+            return Matrix(matrix), ops
+        else:
+            return Matrix(matrix)
+
+    def to_reduced_echelon(self, report_ops=False):
+        matrix, ops = reduce_to_red_echelon(self.data.copy(), True)
+        if report_ops:
+            return Matrix(matrix), ops
+        else:
+            return Matrix(matrix)
 
     def determinant(self):
-        if self.nrows != self.ncols:
+        if self.n_rows != self.n_cols:
             raise Exception('Matrix is not square')
-        if self.nrows == 2:
+        if self.n_rows == 2:
             return (self.data[0][0] * self.data[1][1]) - (self.data[1][0] * self.data[0][1])
         else:
-            echelon, ops = self.to_echelon(True)
+            echelon, ops = reduce_to_echelon(self.data.copy(), True)
             swaps = sum([1 if row[0] == 'swap' else 0 for row in ops])
-            return math.prod([echelon[i][i] for i in range(len(echelon))]) * (-1)**swaps
-            
+            return math.prod([echelon[i][i] for i in range(len(echelon))]) * (-1) ** swaps
 
-    # TODO def inverse(self):
+    def inverse(self):
+        if self.determinant() != 0:
+            ops = reduce_to_red_echelon(self.data.copy(), True)[1]
+            matrix = identity_matrix(self.n_rows).data
+
+            if isinstance(ops[0], str):
+                ops = [ops]
+
+            for op in ops:
+                if op[0] == 'swap':
+                    matrix = row_swap(matrix, op[1], op[2])
+                elif op[0] == 'multiplication':
+                    matrix = row_multiply(matrix, op[1], op[2])
+                elif op[0] == 'subtract':
+                    matrix = row_subtract(matrix, op[1], op[2], op[3])
+                else:
+                    raise ValueError('Row operation not recognized')
+        else:
+            raise ValueError('Matrix has a determinant of 0 and is not invertible')
+        return Matrix(matrix)
 
 
 class Vector:
@@ -49,9 +134,9 @@ class Vector:
         :param column: True if column vector
         """
         for point in lst:
-            if not (isinstance(point, (int, float, complex)) and not isinstance(point, bool)):
+            if not (isinstance(point, (int, float, complex, Fraction)) and not isinstance(point, bool)):
                 raise TypeError('Value is not a number')
-        self.data = lst
+        self.data = [Fraction(i) for i in lst]
         self.column = column
 
     def __len__(self):
@@ -75,8 +160,10 @@ class Vector:
         :param other: scalar or Vector
         :return: Vector
         """
-        if isinstance(other, (int, float, complex)) and not isinstance(other, bool):
+        # other is a scalar
+        if isinstance(other, (int, float, complex, Fraction)) and not isinstance(other, bool):
             return Vector([i + other for i in self.data], self.column)
+        # other is a Vector
         elif isinstance(other, Vector):
             if len(self.data) != len(other):
                 raise Exception('Vectors are not of equal length')
@@ -84,6 +171,7 @@ class Vector:
                 raise Exception('Vectors are not of equal orientation')
             else:
                 return Vector([self.data[i] + other.data[i] for i in range(len(self.data))], self.column)
+        # other is not a scalar or a Vector
         else:
             raise Exception('Argument is not a number or a Vector') from TypeError
 
@@ -94,30 +182,31 @@ class Vector:
         :return: Either a Matrix (Mx1 * 1xN), a Vector (Mx1 * 1), a Vector (1xM * MxN) or a Scalar (1xM * Mx1)
         """
         # other is a number
-        if isinstance(other, (int, float, complex)) and not isinstance(other, bool):
+        if isinstance(other, (int, float, complex, Fraction)) and not isinstance(other, bool):
             return Vector([i * other for i in self.data], self.column)
         # other is a Vector
         elif isinstance(other, Vector):
             len_other = len(other)
-            # Lenths are the same and self is row and other is col
+            # Lengths are the same and self is row and other is col
             if len(self) == len_other and not self.column and other.column:
                 return sum([self.data[i] * other.data[i] for i in range(len(self))])
             # Self is col and other is row
             elif self.column and not other.column:
-                return Matrix([[r * c for c in other.data] for r in self.data])
+                return Matrix([[row * col for col in other.data] for row in self.data])
             elif len(self) == len_other and (self.column == other.column):
                 raise Exception('Cant multiply vectors of same length and orientation')
             else:
                 raise Exception('Vectors are not compatible for multiplication')
-        # other is a Matrix    
+        # other is a Matrix
         elif isinstance(other, Matrix):
-            if not self.column and other.nrows == len(self):
-                return Vector([sum([self.data[r] * other.data[r][c] for r in range(other.nrows)]) 
-                               for c in range(other.ncols)], column=False)
+            if not self.column and other.n_rows == len(self):
+                return Vector([sum([self.data[r] * other.data[r][c] for r in range(other.n_rows)])
+                               for c in range(other.n_cols)], column=False)
             elif self.column:
                 raise Exception('Column Vector cant be multiplied by a Matrix')
             else:
                 raise Exception('Dimensions of Vector and Matrix are not compatible')
+        # other is not a scalar, Vector or Matrix
         else:
             raise TypeError('Argument is not a number or a Vector')
 
@@ -127,8 +216,10 @@ class Vector:
         :param other: scalar
         :return: vector
         """
-        if isinstance(other, (int, float, complex)) and not isinstance(other, bool):
+        # other is a scalar
+        if isinstance(other, (int, float, complex, Fraction)) and not isinstance(other, bool):
             return Vector([i / other for i in self.data], self.column)
+        # other is not a scalar
         else:
             raise TypeError('Argument is not a number')
 
@@ -140,6 +231,13 @@ class Vector:
         """
         return self.__add__(other * -1)
 
+    def __str__(self):
+        lst = [str(i) for i in self.data]
+        if self.column:
+            return '[' + ', '.join(lst) + ']\''
+        else:
+            return '[' + ', '.join(lst) + ']'
+
     def transpose(self):
         """
         Transpose vector
@@ -148,98 +246,44 @@ class Vector:
         return Vector(self.data, not self.column)
 
 
-def ma_reduce_col(data, col):
-    if col != 0:
-        for row_num, row in enumerate(data):
-            if row[col - 1] == 0:
-                start_row = row_num
-    else:
-        start_row = 0
-
-    if start_row + 1 == len(data):
-        return data
-
-    for i, row in enumerate(data[start_row + 1:]):
-        factor = row[col] / data[start_row][col]
-        data[i] = row
-
-
 def identity_matrix(n):
+    """
+    Returns a Matrix of size n*n with 1's on the diagonal
+    :param n: Matrix row and col size
+    :return: nxn Matrix
+    """
     data = [[1 if c == r else 0 for c in range(n)] for r in range(n)]
     return Matrix(data)
 
 
-def row_swap(matrix, row1, row2):
-    if row1 != row2:
-        matrix[row1], matrix[row2] = matrix[row2], matrix[row1]
-        return matrix
-    elif row1 == row2:
-        return matrix
-
-
-def subtract_row(matrix, row1, row2, factor):
-    matrix[row2] = [matrix[row2][i] - (matrix[row1][i] * factor) for i in range(len(matrix[0]))]
-    return matrix
-
-
-def reduce_col(matrix, col, return_ops=False):
-    ops = []
-    current_row = 0
-    # Special treatment for first column
-    if col == 0:
-        if matrix[0][0] == 0:
-            for i in range(len(matrix)):
-                if matrix[i][0] != 0:
-                    matrix = row_swap(matrix, 0, i)
-                    ops.append(['swap', 0, i])
-                    break
-    # General starting row detection
-    else:
-        for i in range(len(matrix) - 2, -1, -1):
-            if matrix[i][col - 1] != 0:
-                current_row = i + 1
-                break
-        if matrix[current_row][col] == 0:
-            for i in range(current_row + 1, len(matrix)):
-                if matrix[i][col] != 0:
-                    matrix = row_swap(matrix, current_row, i)
-                    ops.append(['swap', current_row, i])
-                    break
-    # If starting row number not 0, then start subtracting
-    if matrix[current_row][col] != 0 and current_row != len(matrix):
-        for row in range(current_row + 1, len(matrix)):
-            if matrix[row][col] != 0:
-                factor = matrix[row][col] / matrix[current_row][col]
-                matrix = subtract_row(matrix, current_row, row, factor)
-                ops.append(['subtract', current_row, row, factor])
-    if return_ops:
-        return matrix, ops
-    else:
-        return matrix
-
-
-def clean_ops(ops):
-    lst = []
-    for set in ops:
-        for op in set:
-            lst.append(op)
-    return lst
-
-
-def reduce_echelon(matrix, report_ops=False):
-    ops = []
-    for i in range(len(matrix[0])):
-        if report_ops:
-            matrix, ops_update = reduce_col(matrix, i, report_ops)
-            if ops_update != []:
-                ops.append(ops_update)
-        else:
-            matrix = reduce_col(matrix, i, report_ops)
-    if report_ops:
-        return matrix, clean_ops(ops)
-    else:
-        return matrix
-
 if __name__ == '__main__':
-    #print(Matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]]).to_echelon().data)
-    #print(Matrix([[1, 2, 3], [0.0, -3.0, -6.0], [0.0, 0.0, 0.0]]).data)
+    matrix = [[10, 4, 6, 12, 7, 1, 0],
+      [5, 8, 11, 9, 13, 0, 0],
+      [14, 3, 15, 16, 17, 0, 1],
+      [18, 2, 19, 20, 21, 0, 2],
+      [22, 23, 24, 25, 26, 0, 0],
+      [3, 4, 5, 5, 4, 3, 0],
+      [3, 1, 14, 1, 1, 1, 5]]
+    ma = Matrix(matrix)
+    ma_inv = ma.inverse()
+
+
+    def create_matrix():
+        return Matrix(matrix)
+
+
+    def matrix_inverse():
+        return Matrix(matrix).inverse()
+    
+    def matrix_mult():
+        return ma*ma_inv
+
+
+    print(timeit(create_matrix, number=5)/5)
+    print(ma, '\n')
+
+    print(timeit(matrix_inverse, number=5)/5)
+    print(ma_inv, '\n')
+
+    print(timeit(matrix_mult, number=5)/5)
+    print(ma * ma_inv)
