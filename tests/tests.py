@@ -1,5 +1,5 @@
 import unittest
-from linearAlgebraLib import *
+from linear_algebra.linear_algebra_core import *
 
 
 class LinearAlgebraTest(unittest.TestCase):
@@ -53,3 +53,42 @@ class LinearAlgebraTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+    
+    matrix = [[10, 4, 6, 12, 7, 1, 0],
+              [5, 8, 11, 9, 13, 0, 0],
+              [14, 3, 15, 16, 17, 0, 1],
+              [18, 2, 19, 20, 21, 0, 2],
+              [22, 23, 24, 25, 26, 0, 0],
+              [3, 4, 5, 5, 4, 3, 0],
+              [3, 1, 14, 1, 1, 1, 5]]
+    ma = Matrix(matrix)
+    ma_inv = ma.inverse()
+
+
+    def create_matrix():
+        return Matrix(matrix)
+
+
+    def matrix_inverse():
+        return Matrix(matrix).inverse()
+
+
+    def matrix_mult():
+        return ma * ma_inv
+
+
+    # print(timeit(create_matrix, number=5) / 5)
+    # print(ma, '\n')
+    # 
+    # print(timeit(matrix_inverse, number=5) / 5)
+    # print(ma_inv, '\n')
+    # 
+    # print(timeit(matrix_mult, number=5) / 5)
+    # print(ma * ma_inv, '\n')
+
+    print(solve_linear_system(
+        Matrix([[1, 2, 3], [2, 0, 2], [0, 1, -2]]),
+        Vector([1, 2, 3])))
+
+    print(solve_linear_system(ma,
+                              Vector([1, 10, -3, 5, 3, 4, 8])))
