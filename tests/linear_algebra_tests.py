@@ -5,6 +5,9 @@ from linear_algebra.linear_algebra_core import *
 class LinearAlgebraTest(unittest.TestCase):
 
     def test_matrix(self):
+        def_matrix = Matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+        def_vector = Vector([1, 2, 3])
+
         # Matrix construction
         self.assertEqual(Matrix([[1, 1], [1, 1]]).data, [[1, 1], [1, 1]])
 
@@ -14,6 +17,12 @@ class LinearAlgebraTest(unittest.TestCase):
         self.assertEqual(Matrix([[1, 0], [0, 1]]).determinant(), 1)
         self.assertEqual(Matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]]).to_echelon(),
                          Matrix([[1, 2, 3], [0.0, -3.0, -6.0], [0.0, 0.0, 0.0]]))
+        self.assertEqual((def_matrix.add_col(def_vector)).n_cols, 4)
+        self.assertEqual((def_matrix.add_col(def_matrix)).n_cols, 6)
+        self.assertEqual((def_matrix.add_row(def_vector.transpose())).n_rows, 4)
+        self.assertEqual((def_matrix.add_row(def_matrix)).n_rows, 6)
+        self.assertEqual(def_matrix.row(0), def_vector.transpose())
+        self.assertEqual(def_matrix.col(0), Vector([1, 4, 7]))
 
         # Inverse
         matrix = Matrix([[2, 0, 1], [1, 1, -4], [3, 7, -3]])
@@ -63,28 +72,6 @@ if __name__ == '__main__':
               [3, 1, 14, 1, 1, 1, 5]]
     ma = Matrix(matrix)
     ma_inv = ma.inverse()
-
-
-    def create_matrix():
-        return Matrix(matrix)
-
-
-    def matrix_inverse():
-        return Matrix(matrix).inverse()
-
-
-    def matrix_mult():
-        return ma * ma_inv
-
-
-    # print(timeit(create_matrix, number=5) / 5)
-    # print(ma, '\n')
-    # 
-    # print(timeit(matrix_inverse, number=5) / 5)
-    # print(ma_inv, '\n')
-    # 
-    # print(timeit(matrix_mult, number=5) / 5)
-    # print(ma * ma_inv, '\n')
 
     print(solve_linear_system(
         Matrix([[1, 2, 3], [2, 0, 2], [0, 1, -2]]),

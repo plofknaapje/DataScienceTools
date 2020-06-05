@@ -76,7 +76,7 @@ class Matrix:
         """
         # other is scalar
         if isinstance(other, (int, float, complex, Fraction)) and not isinstance(other, bool):
-            return [[p / other for p in row] for row in self.data]
+            return Matrix([[p / other for p in row] for row in self.data])
         else:
             raise TypeError('Matrix can only be divided by a scalar')
 
@@ -88,7 +88,7 @@ class Matrix:
         """
         # other is scalar
         if isinstance(other, (int, float, complex, Fraction)) and not isinstance(other, bool):
-            return [[p + other for p in row] for row in self.data]
+            return Matrix([[p + other for p in row] for row in self.data])
         # other is Matrix
         elif isinstance(other, Matrix):
             if self.n_cols == other.n_cols and self.n_rows == other.n_rows:
@@ -114,6 +114,12 @@ class Matrix:
         """
         rows = ['[' + ', '.join([str(i) for i in row]) + ']' for row in self.data]
         return '\n'.join(rows)
+
+    def __pow__(self, power, modulo=None):
+        if isinstance(power, (int, float, complex, Fraction)) and not isinstance(power, bool):
+            return Matrix([[p ** power for p in row] for row in self.data])
+        else:
+            raise TypeError('power is not a number')
 
     def transpose(self):
         """
@@ -186,6 +192,48 @@ class Matrix:
         else:
             raise ValueError('Matrix has a determinant of 0 and is not invertible')
         return Matrix(matrix)
+
+    def row(self, i):
+        """
+        Returns ith row of matrix as a Vector
+        :param i: row index
+        :return: Vector
+        """
+        return Vector(self.data[i], False)
+
+    def col(self, i):
+        """
+        Returns ith column of matrix as a Vector
+        :param i: column index
+        :return: Vector
+        """
+        return Vector([row[i] for row in self.data])
+
+    def add_col(self, col):
+        if isinstance(col, Vector):
+            if col.column:
+                return Matrix([self.data[i] + [col.data[i]]
+                               for i in range(self.n_rows)])
+            else:
+                raise ValueError('col is not a column vector')
+        elif isinstance(col, Matrix):
+            if self.n_rows == col.n_rows:
+                return Matrix([self.data[i] + col.data[i]
+                               for i in range(self.n_rows)])
+            else:
+                raise ValueError('col does not have same number of rows as Matrix')
+
+    def add_row(self, row):
+        if isinstance(row, Vector):
+            if not row.column:
+                return Matrix(self.data + [row.data])
+            else:
+                raise ValueError('col is not a row vector')
+        elif isinstance(row, Matrix):
+            if self.n_cols == row.n_cols:
+                return Matrix(self.data + row.data)
+            else:
+                raise ValueError('row does not have same number of cols as Matrix')
 
 
 class Vector:
@@ -310,12 +358,33 @@ class Vector:
         else:
             return '[' + ', '.join(lst) + ']'
 
+    def __pow__(self, power, modulo=None):
+        """
+        Raises numbers in vector to power
+        :param power: number
+        :param modulo: 
+        :return: Vector
+        """
+        if isinstance(power, (int, float, complex, Fraction)) and not isinstance(power, bool):
+            return Vector([i ** power for i in self.data], self.column)
+        else:
+            raise TypeError('power is not a number')
+
     def transpose(self):
         """
         Transpose vector
         :return: vector
         """
         return Vector(self.data.copy(), not self.column)
+
+    def sum(self):
+        return sum(self.data)
+
+    def abs(self):
+        return Vector([abs(i) for i in self.data], self.column)
+
+    def mean(self):
+        return sum(self.data) / len(self)
 
 
 def identity_matrix(n):
@@ -339,7 +408,7 @@ def solve_linear_system(system, goal):
         sol = goal.data.copy()
     else:
         raise ValueError('goal is not a column vector')
-    
+
     if not (len(goal) == system.n_cols):
         raise ValueError('len(goal) != system.n_cols')
 
