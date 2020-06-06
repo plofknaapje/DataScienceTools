@@ -29,19 +29,22 @@ def correlation(x, y, number_type=float):
     return format_score(score, number_type)
 
 
-def f_statistic(num_predictors, y_true, y_pred, number_type=float):
-    score = (total_sum_of_squares(y_true, number_type) - 
+def f_statistic(y_true, y_pred, num_predictors, number_type=float):
+    score = (total_sum_of_squares(y_true, number_type) -
              residual_sum_of_squares(y_true, y_pred, number_type)) / \
             num_predictors / \
             residual_sum_of_squares(y_true, y_pred, number_type) / \
             (len(y_true) - num_predictors - 1)
     return format_score(score, number_type)
 
-# def standard_error(x, y_true, y_pred, number_type=float):
-#     var = residual_standard_error(y_true, y_pred, number_type)**2
-#     se = []
-#     for i in range(x.n_cols):
-#         if i == 0:
-#             se.append(var*(1/len(y_true) + ))
-#         else:
-#             se.append()
+
+def chi_squared(y_true, y_pred, number_type=float):
+    score = ((y_pred - y_true.mean())**2) / y_true.mean()
+    return format_score(score, number_type)
+
+
+def standard_error_coefs(x, y_true, y_pred, number_type=float):
+    matrix = (x.transpose()*x).inverse()
+    s2 = (y_true - y_pred).transpose() * (y_true - y_pred) / \
+         (len(y_true) - x.n_cols)
+    return [(s2 * matrix.data[i, i])**2 for i in range(matrix.n_cols)]

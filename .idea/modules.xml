@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/../LinearAlgebraLib/.idea/LinearAlgebraLib.iml" filepath="$PROJECT_DIR$/../LinearAlgebraLib/.idea/LinearAlgebraLib.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/Data Science Tools.iml" filepath="$PROJECT_DIR$/.idea/Data Science Tools.iml" />
     </modules>
   </component>
 </project>
