@@ -1,7 +1,7 @@
 import modeling.evaluation.regression_evaluation as reg_eval
 
 
-def mean_squared_error(y_true, y_pred, number_type=float):
+def mean_squared_error(y_true, y_pred, number_type=float, **kwargs):
     """
     Mean squared error of predictions
     :param y_true: Vector
@@ -13,7 +13,7 @@ def mean_squared_error(y_true, y_pred, number_type=float):
     return reg_eval.format_score(score, number_type)
 
 
-def mean_absolute_error(y_true, y_pred, number_type=float):
+def mean_absolute_error(y_true, y_pred, number_type=float, **kwargs):
     """
     Mean absolute error of predictions
     :param y_true: Vector
@@ -25,7 +25,7 @@ def mean_absolute_error(y_true, y_pred, number_type=float):
     return reg_eval.format_score(score, number_type)
 
 
-def r_squared(y_true, y_pred, number_type=float):
+def r_squared(y_true, y_pred, number_type=float, **kwargs):
     """
     R^2 score of prediction
     :param y_true: Vector
@@ -38,7 +38,8 @@ def r_squared(y_true, y_pred, number_type=float):
     return reg_eval.format_score(score, number_type)
 
 
-def reduced_chi_squared(y_true, y_pred, num_predictors, number_type=float):
+def reduced_chi_squared(y_true, y_pred, num_predictors, number_type=float, 
+                        **kwargs):
     score = reg_eval.chi_squared(y_true, y_pred, number_type) / \
             (len(y_true) - num_predictors)
     return reg_eval.format_score(score, number_type)

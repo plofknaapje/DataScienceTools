@@ -18,11 +18,11 @@ class Matrix:
         row_len = len(data[1])
         for row in data:
             if len(row) != row_len:
-                raise Exception('Rows not equal length') from None
+                raise ValueError('Rows not equal length') from None
             for point in row:
                 if not (isinstance(point, (int, float, complex, Fraction))
                         and not isinstance(point, bool)):
-                    raise Exception('Value is not a number') from None
+                    raise ValueError('Value is not a number')
         self.data = [[Fraction(col) for col in row] for row in data]
         self.n_rows = len(data)
         self.n_cols = len(data[1])
@@ -176,19 +176,20 @@ class Matrix:
         if self.determinant() != 0:
             ops = reduce_to_red_echelon(self.data.copy(), True)[1]
             matrix = identity_matrix(self.n_rows).data
-
-            if isinstance(ops[0], str):
-                ops = [ops]
-
-            for op in ops:
-                if op[0] == 'swap':
-                    matrix = row_swap(matrix, op[1], op[2])
-                elif op[0] == 'multiplication':
-                    matrix = row_multiply(matrix, op[1], op[2])
-                elif op[0] == 'subtract':
-                    matrix = row_subtract(matrix, op[1], op[2], op[3])
-                else:
-                    raise ValueError('Row operation not recognized')
+            
+            if ops:
+                if isinstance(ops[0], str):
+                    ops = [ops]
+    
+                for op in ops:
+                    if op[0] == 'swap':
+                        matrix = row_swap(matrix, op[1], op[2])
+                    elif op[0] == 'multiplication':
+                        matrix = row_multiply(matrix, op[1], op[2])
+                    elif op[0] == 'subtract':
+                        matrix = row_subtract(matrix, op[1], op[2], op[3])
+                    else:
+                        raise ValueError('Row operation not recognized')
         else:
             raise ValueError('Matrix has a determinant of 0 and is not invertible')
         return Matrix(matrix)
@@ -200,7 +201,13 @@ class Matrix:
         :return: Vector
         """
         return Vector(self.data[i], False)
-
+    
+    def rows(self, lst):
+        base = []
+        for i in lst:
+            base.append(self.data[i])
+        return Matrix(base)
+    
     def col(self, i):
         """
         Returns ith column of matrix as a Vector
@@ -208,6 +215,9 @@ class Matrix:
         :return: Vector
         """
         return Vector([row[i] for row in self.data])
+    
+    def cols(self, lst):
+        return self.transpose().rows(lst)
 
     def add_col(self, col):
         if isinstance(col, Vector):
@@ -432,3 +442,9 @@ def solve_linear_system(system, goal):
                              sol is not 0 at pivotless row')
 
     return Vector(sol)
+
+
+def enhance_matrix(x):
+    if x.col(0) != Vector([1 for _ in range(x.n_rows)]):
+        x = Matrix([[1] for _ in range(x.n_rows)]).add_col(x)
+    return x
