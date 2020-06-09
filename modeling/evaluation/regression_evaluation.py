@@ -1,5 +1,6 @@
 import linear_algebra.linear_algebra_core as core
 
+
 def format_score(score, number_type=None):
     if number_type is None:
         return score
@@ -17,35 +18,33 @@ def residual_sum_of_squares(y_true, y_pred, number_type=float, **kwargs):
     return format_score(score, number_type)
 
 
-def residual_standard_error(y_true, y_pred, number_type=float, **kwargs):
-    score = ((1 / (len(y_true) - 2)) *
-             residual_sum_of_squares(y_true, y_pred, number_type)) ** 0.5
+def residual_standard_error(y_true, y_pred, num_predictors, number_type=float, **kwargs):
+    rss = residual_sum_of_squares(y_true, y_pred, number_type)
+    score = ((1 / (len(y_true) - num_predictors)) * rss) ** 0.5
     return format_score(score, number_type)
 
 
 def correlation(x, y, number_type=float, **kwargs):
     """
-    
     :param x: 
     :param y: 
     :param number_type: 
     :param kwargs: 
     :return: 
     """
+    tss = total_sum_of_squares(x, number_type)
     score = ((x - x.mean()).transpose() * (y - y.mean())) / \
-            (total_sum_of_squares(x, number_type) ** 0.5 *
-             total_sum_of_squares(y, number_type) ** 0.5)
+            (tss**0.5 * tss**0.5)
     return format_score(score, number_type)
 
 
 def f_statistic(y_true, y_pred, num_predictors, number_type=float, **kwargs):
     if (len(y_true) - num_predictors - 1) <= 0:
         raise ValueError('Not enough y values to determine F-statistic')
-    score = (total_sum_of_squares(y_true, number_type) -
-             residual_sum_of_squares(y_true, y_pred, number_type)) / \
-            num_predictors / \
-            residual_sum_of_squares(y_true, y_pred, number_type) / \
-            (len(y_true) - num_predictors - 1)
+    tss = total_sum_of_squares(y_true, number_type)
+    rss = residual_sum_of_squares(y_true, y_pred, number_type)
+    df = len(y_true) - num_predictors
+    score = ((tss - rss) / (num_predictors - 1)) / (rss / df)
     return format_score(score, number_type)
 
 
@@ -56,10 +55,9 @@ def chi_squared(y_true, y_pred, number_type=float, **kwargs):
 
 def standard_error_coefs(x, y_true, y_pred, number_type=float, **kwargs):
     x = core.enhance_matrix(x)
+    mse = ((y_true - y_pred)**2).sum() / (len(y_true) - x.n_cols)
     matrix = (x.transpose()*x).inverse()
-    s2 = (y_true - y_pred).transpose() * (y_true - y_pred) / \
-         (len(y_true) - x.n_cols)
-    return [(s2 * matrix.data[i][i])**2 for i in range(matrix.n_cols)]
+    return [(mse * matrix.data[i][i])**0.5 for i in range(x.n_cols)]
 
 
 def t_statistic(x, y_true, y_pred, coefs, number_type=float, **kwargs):

@@ -33,12 +33,13 @@ def r_squared(y_true, y_pred, number_type=float, **kwargs):
     :param number_type: type of output function
     :return: number
     """
-    score = 1 - reg_eval.residual_sum_of_squares(y_true, y_pred, number_type) / \
-            reg_eval.total_sum_of_squares(y_true, number_type)
+    rss = reg_eval.residual_sum_of_squares(y_true, y_pred, number_type)
+    tss = reg_eval.total_sum_of_squares(y_true, number_type)
+    score = 1 - rss / tss
     return reg_eval.format_score(score, number_type)
 
 
-def reduced_chi_squared(y_true, y_pred, num_predictors, number_type=float, 
+def reduced_chi_squared(y_true, y_pred, num_predictors, number_type=float,
                         **kwargs):
     score = reg_eval.chi_squared(y_true, y_pred, number_type) / \
             (len(y_true) - num_predictors)

@@ -2,6 +2,7 @@ import linear_algebra.linear_algebra_core as core
 import modeling.metrics.regression_metrics as reg_met
 import modeling.evaluation.regression_evaluation as reg_eval
 from tabulate import tabulate
+from scipy.stats import f, t
 
 
 class Model:
@@ -46,7 +47,7 @@ class LinearRegression(Model):
             raise Exception('Model has not been fitted yet')
         x = core.enhance_matrix(x)
         regression_data_check(x, width=len(self.coefficients))
-        
+
         return x * self.coefficients
 
     def score(self, x, y_true, metric=reg_met.r_squared, number_type=float):
@@ -55,43 +56,52 @@ class LinearRegression(Model):
             raise Exception('Model has not been fitted yet')
         return metric(y_true, self.predict(x), number_type)
 
-    def evaluate(self, x, y_true, global_metrics={}, variable_metrics={}):
+    def evaluate(self, x, y_true):
         """
         Evaluates the performance of the trained model on a global and variable
         level. For global, RSE, R^2 and F-statistic are standard. For variables
         the SE and t-statistic is used.
         :param x: Matrix of predictors
         :param y_true: Vector of true y values
-        :param global_metrics: dict of additional evaluations to use
-        :param variable_metrics: dict of additional evaluations to use
         :return: 
         """
         x = core.enhance_matrix(x)
         y_pred = self.predict(x)
-        global_metrics = {**{'RSE': reg_eval.residual_standard_error,
-                             'R^2': reg_met.r_squared,
-                             'F-statistic': reg_eval.f_statistic},
-                          **global_metrics}
-        variable_metrics = {**{'SE': reg_eval.standard_error_coefs,
-                               't-statistic': reg_eval.t_statistic},
-                            **variable_metrics}
+        global_metrics = [['RSE', reg_eval.residual_standard_error],
+                          ['R^2', reg_met.r_squared],
+                          ['F-statistic', reg_eval.f_statistic],
+                          ['p-value']]
+        var_metrics = [['SE', reg_eval.standard_error_coefs],
+                       ['t-statistic', reg_eval.t_statistic],
+                       ['p-value']]
 
-        global_labels = ['Metric', 'Value']
-        variable_labels = ['Column', 'Coefficient'] + list(variable_metrics.keys())
+        glob_outcomes = {'Metric': [], 'Value': []}
+        for i in global_metrics:
+            if len(i) > 1:
+                glob_outcomes['Metric'].append(i[0])
+                glob_outcomes['Value'].append(i[1](x=x, y_true=y_true, y_pred=y_pred,
+                                                   num_predictors=x.n_cols))
+            elif i[0] == 'p-value':
+                glob_outcomes['Metric'].append(i[0])
+                glob_outcomes['Value'].append(f.sf(glob_outcomes['Value'][2],
+                                              dfn=len(y_pred), dfd=x.n_cols - 1))
+            else:
+                raise Exception('Single value metric not implemented')
 
-        global_outcomes = {key: global_metrics[key](x=x, y_true=y_true, y_pred=y_pred,
-                                                    num_predictors=x.n_cols)
-                           for key in global_metrics.keys()}
-        variable_outcomes = {'Column':list(range(x.n_cols)), 'Coefficient':self.coefficients.data}
-        for item in variable_labels[2:]:
-            variable_outcomes[item] = variable_metrics[item](x=x, y_true=y_true, y_pred=y_pred,
-                                                            coefs=variable_outcomes['Coefficient'])
-            
-        print(tabulate([[key, global_outcomes[key]] for key in global_metrics.keys()],
-                       global_labels))
-        print(tabulate(variable_outcomes, variable_labels))
+        var_outcomes = {'Column': list(range(x.n_cols)),
+                        'Coefficient': self.coefficients.data}
+        for i in var_metrics:
+            if len(i) > 1:
+                var_outcomes[i[0]] = i[1](x=x, y_true=y_true, y_pred=y_pred,
+                                                       coefs=var_outcomes['Coefficient'])
+            elif i[0] == 'p-value':
+                var_outcomes[i[0]] = [2*t.sf(abs(float(score)), len(y_pred) - x.n_cols)
+                                      for score in var_outcomes['t-statistic']]
 
-        return global_outcomes, variable_outcomes
+        print(tabulate(glob_outcomes, headers='keys'))
+        print(tabulate(var_outcomes, headers='keys'))
+
+        return glob_outcomes, var_outcomes
 
     def get_params(self):
         return self.criterion
