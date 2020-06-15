@@ -108,7 +108,7 @@ class LinearRegression(Model):
         return glob_outcomes, var_outcomes
 
     def get_params(self):
-        return self.criterion
+        return {'criterion': self.criterion}
 
     def set_params(self, criterion='LS'):
         self.criterion = criterion
@@ -132,27 +132,37 @@ class KNNRegression(Model):
 
     def predict(self, x):
         distances = [[[nn_dist.distance_continuous(x.row(new_row),
-                                                  self.x.row(train_row),
-                                                  self.measure),
-                      train_row] for train_row in range(self.x.n_rows)]
+                                                   self.x.row(train_row),
+                                                   self.measure),
+                       train_row] for train_row in range(self.x.n_rows)]
                      for new_row in range(x.n_rows)]
         distances = [sorted(row)[:self.k] for row in distances]
-        
+
         if self.weight == 'equal':
-            predictions = [sum(self.y_true.data[i[1]] for i in row)/self.k
+            predictions = [sum(self.y_true.data[i[1]] for i in row) / self.k
                            for row in distances]
-        
+        elif self.weight == 'distance':
+            predictions = [sum(self.y_true.data[i[1]] * i[0] ** -1 for i in row) /
+                           sum(i[0] ** -1 for i in row) for row in distances]
+        else:
+            raise Exception('Weight type not implemented')
         return core.Vector(predictions)
 
+    def score(self, x, y_true, metric=reg_met.r_squared, number_type=float):
+        return metric(y_true, self.predict(x), number_type)
 
-def knn_error(x, y_true, k, weight='equal'):
-    distances_matrix = x * x.transpose()
-    distances_list_pairs = [sorted([[row[i], i] for i in range(len(row))])[0:k]
-                            for row in distances_matrix.data]
-    print(distances_list_pairs)
-    y_pred_list = [sum([i[1] for i in row]) / k for row in distances_list_pairs]
-    y_pred = core.Vector(y_pred_list)
-    return reg_met.root_mean_squared_error(y_pred, y_true)
+    def evaluate(self, x, y_true, number_type=float):
+        y_pred = self.predict(x)
+        error = reg_met.root_mean_squared_error(y_true, y_pred, number_type)
+        print("With {:d} neighbours, the RMSE is {:.2f}".format(self.k, error))
+
+    def get_params(self):
+        return {'weight': self.weight, 'measure': self.measure,
+                'k': self.k, 'x': self.x, 'y_true': self.y_true}
+
+    def set_params(self, weight='equal', measure='euclidean'):
+        self.weight = weight
+        self.measure = measure
 
 
 if __name__ == "__main__":
@@ -168,9 +178,8 @@ if __name__ == "__main__":
     # print(reg_eval.correlation(x.col(0), y))
     # model.evaluate(x, y)
     knn = KNNRegression()
-    
+
     for k in range(1, 4):
         knn.fit(x, y, k=k)
         y_pred = knn.predict(x_test)
         print(reg_met.mean_absolute_error(y_test, y_pred))
-    
