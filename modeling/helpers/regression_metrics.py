@@ -1,4 +1,4 @@
-import modeling.evaluation.regression_evaluation as reg_eval
+import modeling.helpers.regression_evaluation as reg_eval
 
 
 def mean_squared_error(y_true, y_pred, number_type=float, **kwargs):
@@ -10,6 +10,18 @@ def mean_squared_error(y_true, y_pred, number_type=float, **kwargs):
     :return: number
     """
     score = ((y_true - y_pred) ** 2).sum() / len(y_true)
+    return reg_eval.format_score(score, number_type)
+
+
+def root_mean_squared_error(y_true, y_pred, number_type=float, **kwargs):
+    """
+    Root of mean squared error of predictions
+    :param y_true: Vector
+    :param y_pred: Vector
+    :param number_type: type of output function
+    :return: number
+    """
+    score = mean_squared_error(y_true, y_pred, number_type) ** 0.5
     return reg_eval.format_score(score, number_type)
 
 

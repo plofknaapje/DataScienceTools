@@ -64,3 +64,21 @@ def t_statistic(x, y_true, y_pred, coefs, number_type=float, **kwargs):
     x = core.enhance_matrix(x)
     se_coefs = standard_error_coefs(x, y_true, y_pred, number_type)
     return [coefs[i]/se_coefs[i] for i in range(len(coefs))]
+
+
+def regression_data_check(x, y=None, width=None):
+    if not isinstance(x, core.Matrix):
+        raise TypeError('x has to be a Matrix')
+
+    if y is not None:
+        if not isinstance(y, core.Vector):
+            raise TypeError('y has to be a Vector')
+        if not y.column:
+            raise ValueError('Only column Vectors are accepted')
+        if len(y) != x.n_rows:
+            raise ValueError('Length of y has to be the same as number of rows'
+                             'in x')
+
+    if width is not None:
+        if x.n_cols != width:
+            raise ValueError('Number of cols in x has to be equal to width')
